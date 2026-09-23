@@ -685,6 +685,9 @@ namespace SiteEngine.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<int>("HeaderLayoutStyle")
+                        .HasColumnType("int");
+
                     b.Property<string>("HeaderText")
                         .IsRequired()
                         .HasMaxLength(1024)

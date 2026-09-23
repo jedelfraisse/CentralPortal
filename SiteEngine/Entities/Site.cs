@@ -13,6 +13,11 @@ public class Site
 
 	public SiteType SiteType { get; set; } = SiteType.LocalUnit;
 
+	// Which masthead arrangement SiteShellLayout renders for this site — see
+	// HeaderLayoutStyle. Inline suits most simple sites; Stacked matches the
+	// older Division masthead shape for sites that want a fuller banner.
+	public HeaderLayoutStyle HeaderLayoutStyle { get; set; } = HeaderLayoutStyle.Inline;
+
 	public Guid? ParentSiteId { get; set; }
 	public Site? ParentSite { get; set; }
 	public ICollection<Site> ChildSites { get; set; } = new List<Site>();

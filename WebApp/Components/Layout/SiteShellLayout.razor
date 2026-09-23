@@ -1,0 +1,154 @@
+@* Generic, data-driven masthead/nav/footer shell meant to replace
+   DivisionLayout and UnitLayout once it's been tried out for real (see
+   SiteLayoutSelector — not wired in there yet). Where those two layouts
+   hardcode PTA-specific nav links and copy, this one only renders what a
+   Site actually has data for, and supports exactly two masthead
+   arrangements via Site.HeaderLayoutStyle — enough flexibility for a plain
+   site to look intentional without becoming a free-form layout builder. *@
+@using SiteEngine.Entities
+@using SiteEngine.Enums
+@using WebApp.Services
+@inherits SiteLayoutBase
+@inject SiteContext SiteContext
+@inject SiteAdminService SiteAdminService
+
+@code {
+	private Site? Site => SiteContext.CurrentSite;
+
+	protected override async Task OnParametersSetAsync()
+	{
+		// Resolve the current site the same way DivisionLayout/UnitLayout do,
+		// so the role check and members-only gate are scoped correctly.
+		await SiteContext.InitializeAsync(new Uri(NavigationManager.Uri).Host);
+		await RefreshUserStateAsync(Site?.Id);
+		await RefreshMembersOnlyGateAsync(Site);
+
+		if (Site is not null && string.IsNullOrWhiteSpace(Site.LogoUrl))
+		{
+			var logoUrl = await SiteAdminService.EnsureGeneratedLogoAsync(Site.Id);
+			if (logoUrl is not null)
+				Site.LogoUrl = logoUrl;
+		}
+	}
+
+	private record LogoSlot(string Url, string Alt, string Style);
+
+	// Up to four optional logo slots, in display order — a basic site only
+	// ever fills the first one, so the row collapses to a single logo rather
+	// than leaving gaps.
+	private IEnumerable<LogoSlot> Logos()
+	{
+		if (Site is null)
+			yield break;
+
+		if (!string.IsNullOrWhiteSpace(Site.LogoUrl))
+			yield return new LogoSlot(Site.LogoUrl, Site.SiteName,
+				LogoBoxStyle(Site, Site.GeneratedLogoWidth, Site.GeneratedLogoHeight, Site.GeneratedLogoPreserveAspectRatio));
+
+		if (!string.IsNullOrWhiteSpace(Site.PTALogoVariantUrl))
+			yield return new LogoSlot(Site.PTALogoVariantUrl, Site.SiteName,
+				LogoBoxStyle(Site, Site.PtaVariantLogoWidth, Site.PtaVariantLogoHeight, Site.PtaVariantLogoPreserveAspectRatio));
+
+		// A Local Unit's crest (falling back to its parent Division's district
+		// logo) or, for a Division itself, its own district/city logo — see
+		// SiteThemeExtensions.ResolvedSchoolCrestUrl.
+		var affiliateLogoUrl = Site.ResolvedSchoolCrestUrl() ?? Site.ResolvedDistrictLogoUrl();
+		if (!string.IsNullOrWhiteSpace(affiliateLogoUrl))
+			yield return new LogoSlot(affiliateLogoUrl, $"{Site.SiteName} affiliate logo",
+				LogoBoxStyle(Site, Site.DistrictLogoWidth, Site.DistrictLogoHeight, Site.DistrictLogoPreserveAspectRatio));
+
+		var partnerLogoUrl = Site.ResolvedPartnerLogoUrl();
+		if (!string.IsNullOrWhiteSpace(partnerLogoUrl))
+			yield return new LogoSlot(partnerLogoUrl, $"{Site.SiteName} partner logo",
+				LogoBoxStyle(Site, Site.PartnerLogoWidth, Site.PartnerLogoHeight, Site.PartnerLogoPreserveAspectRatio));
+	}
+
+	// Quick-links slot: whatever external tools (GiveBacks, Sign Up Genius,
+	// social) this site currently relies on. Deliberately just "links a site
+	// has", not "PTA links" — as first-party Tools (see CLAUDE.md §6) take
+	// over some of these jobs, they show up here the same way without the
+	// shell needing to change.
+	private IEnumerable<(string Url, string Label)> QuickLinks()
+	{
+		if (Site is null)
+			yield break;
+
+		if (!string.IsNullOrWhiteSpace(Site.GiveBacksURL))
+			yield return (Site.GiveBacksURL, "GiveBacks");
+		if (!string.IsNullOrWhiteSpace(Site.SignUpGeniusURL))
+			yield return (Site.SignUpGeniusURL, "Sign Up Genius");
+		if (!string.IsNullOrWhiteSpace(Site.FaceBookURL))
+			yield return (Site.FaceBookURL, "Facebook");
+		if (!string.IsNullOrWhiteSpace(Site.TwitterURL))
+			yield return (Site.TwitterURL, "Twitter");
+		if (!string.IsNullOrWhiteSpace(Site.InstagramURL))
+			yield return (Site.InstagramURL, "Instagram");
+	}
+}
+
+@if (IsBlockedByMembersOnly)
+{
+	<MembersOnlyGate SiteName="@(Site?.SiteName ?? "This site")" IsAuthenticated="IsAuthenticated" />
+}
+else
+{
+	var stacked = Site?.HeaderLayoutStyle == HeaderLayoutStyle.Stacked;
+
+	<div class="shell @(stacked ? "shell-stacked" : "shell-inline")" style="@ThemeStyle(Site)">
+		<div class="shell-topbar"></div>
+
+		<header class="shell-masthead" role="banner">
+			<div class="shell-brand">
+				@foreach (var logo in Logos())
+				{
+					<img class="shell-logo" src="@logo.Url" alt="@logo.Alt" style="@logo.Style" />
+				}
+				<span class="shell-site-name">@Site?.SiteName</span>
+			</div>
+
+			<nav class="shell-nav" aria-label="Primary">
+				<a href="/">Home</a>
+				@if (ShowAdminLink)
+				{
+					<a href="/admin">Admin</a>
+				}
+				<AuthorizeView>
+					<Authorized>
+						<a href="/dashboard">Dashboard</a>
+						<a href="/logout">Logout</a>
+					</Authorized>
+					<NotAuthorized>
+						<a href="/login">Login</a>
+					</NotAuthorized>
+				</AuthorizeView>
+			</nav>
+		</header>
+
+		@if (!string.IsNullOrWhiteSpace(Site?.MenuBackgroundImageUrl))
+		{
+			<div class="shell-divider" style="background-image:url('@Site.MenuBackgroundImageUrl')"></div>
+		}
+
+		<main class="shell-main">
+			<div class="shell-content">
+				@Body
+			</div>
+		</main>
+
+		<footer class="shell-footer">
+			@{ var quickLinks = QuickLinks().ToList(); }
+			@if (quickLinks.Count > 0)
+			{
+				<div class="shell-footer-links">
+					@foreach (var link in quickLinks)
+					{
+						<a href="@link.Url" target="_blank" rel="noopener noreferrer">@link.Label</a>
+					}
+				</div>
+			}
+			<div class="shell-footer-legal">
+				© @DateTime.UtcNow.Year @Site?.SiteName. All rights reserved.
+			</div>
+		</footer>
+	</div>
+}

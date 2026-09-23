@@ -1,0 +1,40 @@
+@* Renders whatever site the current hostname resolves to through the new
+   SiteShellLayout (see WebApp/Components/Layout/SiteShellLayout.razor)
+   instead of DivisionLayout/UnitLayout, so the shell can be compared
+   side-by-side against the real site before SiteLayoutSelector switches
+   over to it. Flip a site between Inline/Stacked from its "Layout" card at
+   Global Admin -> Sites -> that site, then reload this page on that site's
+   hostname. *@
+@page "/dev/layout-preview"
+@layout WebApp.Components.Layout.SiteShellLayout
+@using SiteEngine.Entities
+@using WebApp.Services
+@inject SiteContext SiteContext
+
+<PageTitle>Layout Shell Preview</PageTitle>
+
+<div class="alert alert-info">
+    <strong>Layout shell preview</strong> — this page renders through the new
+    <code>SiteShellLayout</code>, not the site's normal layout. Everything
+    above and below this box (masthead, nav, footer) is the new shell using
+    this site's real branding data.
+</div>
+
+@if (SiteContext.CurrentSite is { } site)
+{
+    <dl class="row">
+        <dt class="col-sm-3">Site</dt>
+        <dd class="col-sm-9">@site.SiteName (@site.SiteType)</dd>
+
+        <dt class="col-sm-3">Header layout style</dt>
+        <dd class="col-sm-9">@site.HeaderLayoutStyle</dd>
+    </dl>
+    <p class="text-muted">
+        Change this site's arrangement from Global Admin → Sites → @site.SiteName → Layout,
+        then reload this page.
+    </p>
+}
+else
+{
+    <p class="text-muted">No site resolved for this hostname.</p>
+}

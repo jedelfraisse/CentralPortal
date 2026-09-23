@@ -312,6 +312,25 @@ public class SiteAdminService(
 		return new SiteAdminResult(true, null, site);
 	}
 
+	// Which masthead arrangement SiteShellLayout renders for this site — a
+	// layout choice, not a branding one, so it's kept out of the
+	// Branding/SaveBrandingAsync surface entirely (see md/Layout.md).
+	public async Task<SiteAdminResult> UpdateHeaderLayoutStyleAsync(
+		Guid siteId, HeaderLayoutStyle style, CancellationToken cancellationToken = default)
+	{
+		await using var db = await _dbFactory.CreateDbContextAsync(cancellationToken);
+
+		var site = await db.Sites.FirstOrDefaultAsync(s => s.Id == siteId, cancellationToken);
+		if (site is null)
+			return new SiteAdminResult(false, "Site not found.");
+
+		site.HeaderLayoutStyle = style;
+		site.UpdatedAtUtc = DateTimeOffset.UtcNow;
+		await db.SaveChangesAsync(cancellationToken);
+
+		return new SiteAdminResult(true, null, site);
+	}
+
 	public async Task<SiteSummary> GetSiteSummaryAsync(Guid siteId, CancellationToken cancellationToken = default)
 	{
 		await using var db = await _dbFactory.CreateDbContextAsync(cancellationToken);

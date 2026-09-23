@@ -159,6 +159,43 @@
                 </div>
             </div>
 
+            @* ---------------- Layout ---------------- *@
+            <div class="card shadow-sm mb-4">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h6 class="card-title mb-0">Layout</h6>
+                        @if (!_editingLayout)
+                        {
+                            <button type="button" class="btn btn-sm btn-outline-secondary" @onclick="EnterEditLayout">Edit</button>
+                        }
+                    </div>
+                    <p class="text-muted small mb-2">Which masthead arrangement SiteShellLayout renders for this site.</p>
+
+                    @if (!string.IsNullOrEmpty(_layoutError))
+                    {
+                        <div class="alert alert-danger mt-2">@_layoutError</div>
+                    }
+
+                    @if (!_editingLayout)
+                    {
+                        <span class="badge text-bg-secondary mt-2">@_site.HeaderLayoutStyle</span>
+                    }
+                    else
+                    {
+                        <div class="d-flex gap-2 align-items-center mt-2">
+                            <select class="form-select" style="max-width: 220px;" @bind="_editHeaderLayoutStyle">
+                                @foreach (var style in Enum.GetValues<HeaderLayoutStyle>())
+                                {
+                                    <option value="@style">@style</option>
+                                }
+                            </select>
+                            <button type="button" class="btn btn-sm btn-primary" disabled="@_savingLayout" @onclick="SaveLayoutAsync">Save</button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary" disabled="@_savingLayout" @onclick="() => _editingLayout = false">Cancel</button>
+                        </div>
+                    }
+                </div>
+            </div>
+
             @* ---------------- Site Information ---------------- *@
             <div class="card shadow-sm mb-4">
                 <div class="card-body">
@@ -732,6 +769,12 @@
     private bool _savingStatus;
     private string? _statusError;
 
+    // ---- Layout ----
+    private bool _editingLayout;
+    private HeaderLayoutStyle _editHeaderLayoutStyle;
+    private bool _savingLayout;
+    private string? _layoutError;
+
     // ---- Site Information ----
     private bool _editingInfo;
     private string _editSiteName = string.Empty;
@@ -882,6 +925,36 @@
 
         _site.SiteStatus = result.Site!.SiteStatus;
         _editingStatus = false;
+    }
+
+    // ---- Layout ----
+    private void EnterEditLayout()
+    {
+        _editHeaderLayoutStyle = _site!.HeaderLayoutStyle;
+        _layoutError = null;
+        _editingLayout = true;
+    }
+
+    private async Task SaveLayoutAsync()
+    {
+        if (_site is null)
+            return;
+
+        _savingLayout = true;
+        _layoutError = null;
+
+        var result = await SiteAdminService.UpdateHeaderLayoutStyleAsync(_site.Id, _editHeaderLayoutStyle);
+
+        _savingLayout = false;
+
+        if (!result.Success)
+        {
+            _layoutError = result.Error;
+            return;
+        }
+
+        _site.HeaderLayoutStyle = result.Site!.HeaderLayoutStyle;
+        _editingLayout = false;
     }
 
     // ---- Site Information ----
