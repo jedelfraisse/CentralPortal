@@ -76,6 +76,15 @@ Roughly 60% of a typical issue is standing reference repeated every week.
 **This Week / Coming Up:** dated events and deadlines with source tags.
 **Get Involved:** PTA membership, meetings, volunteer asks.
 
+### Membership expiry
+Roles and memberships do **not** lapse automatically. The July 1 school year
+(`SchoolYear.Current()`) is a PTA convention, not a rule for every group, and
+automatic lapsing could lock a site's only volunteer out over the summer. For
+launch, a unit admin removes or renews members by hand. Later, expiry becomes an
+option per Organization Type ("memberships end with each cycle"), driven by
+that type's Operational Cycles. Types with no cycles never lapse. A test in
+`SiteRoleResolverTests` pins the current behavior.
+
 ## Launch scope (the whole first release)
 
 1. **Content items:** one entity for site content with a kind (Newsletter, Event,
@@ -102,6 +111,7 @@ Framework yet, so its next promotion carries those database migrations too.
 - Automatic newsletter import or Smore scraping
 - A built-in translate button (rely on the browser's translate for now)
 - Organization Framework phase 2+ (membership migration), Permission Groups
+- Membership expiry per cycle (an option per Organization Type, using Operational Cycles)
 - On-Prem profile, CueConnect, other org types' special features
 - Division-level content flowing down to units
 - **Fundraising Partners directory** (see below)

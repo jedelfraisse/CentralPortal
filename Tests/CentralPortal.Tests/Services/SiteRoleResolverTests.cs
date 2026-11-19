@@ -79,6 +79,20 @@ public class SiteRoleResolverTests : IDisposable
 		Assert.Equal(SiteRole.Viewer, await _resolver.ResolveAsync(user, unit.Id));
 	}
 
+	// Deliberate (md/LaunchFocus.md, "Membership expiry"): roles do NOT lapse
+	// at a school-year boundary, because not every group runs on a school year.
+	// Expiry will become a per-Organization-Type option driven by its
+	// OperationalCycles. If this test fails, that change should be intentional.
+	[Fact]
+	public async Task Roles_from_a_previous_school_year_still_count()
+	{
+		var unit = _db.AddSite();
+		var user = _db.AddUser();
+		_db.GrantRole(user, unit.Id, SiteRole.Member, schoolYear: "2020-2021");
+
+		Assert.Equal(SiteRole.Member, await _resolver.ResolveAsync(user, unit.Id));
+	}
+
 	[Fact]
 	public void HighestRole_combines_portal_and_membership_roles() =>
 		Assert.Equal(SiteRole.Officer, SiteRoleResolver.HighestRole(SiteRole.Viewer, [SiteRole.Member, null, SiteRole.Officer]));
