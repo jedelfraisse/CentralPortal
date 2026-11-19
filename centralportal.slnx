@@ -11,4 +11,7 @@
   </Folder>
   <Project Path="SiteEngine/SiteEngine.csproj" Id="456872e5-2bb0-4e4d-bc42-56bbc3d6769d" />
   <Project Path="WebApp/WebApp.csproj" />
+  <Folder Name="/Tests/">
+    <Project Path="Tests/CentralPortal.Tests/CentralPortal.Tests.csproj" />
+  </Folder>
 </Solution>

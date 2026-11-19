@@ -336,6 +336,14 @@ Goals include:
 - Long-term sustainability
 - Reduced dependence on expensive third-party platforms
 
+## Running the tests
+
+```
+dotnet test centralportal.slnx
+```
+
+Tests live in `Tests/CentralPortal.Tests` (xUnit). Service tests run against a fresh in-memory SQLite database per test. Use `Support/TestDb.cs` to create sites, users, and roles. CI runs the same command, and the stage and live deploys stop if any test fails.
+
 ---
 
 # Roadmap
