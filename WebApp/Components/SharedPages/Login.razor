@@ -2,6 +2,7 @@
 @inject NavigationManager NavigationManager
 @inject PasswordlessSignInService PasswordlessSignInService
 @inject ILogger<Login> Logger
+@inject IWebHostEnvironment HostEnvironment
 
 <PageTitle>Sign in</PageTitle>
 
@@ -80,8 +81,12 @@
 
     protected override void OnInitialized()
     {
+        // The Host header is client-controlled, so a hostname check alone could
+        // be spoofed against a deployed server to reveal sign-in codes. Require
+        // the Development environment too — stage and live never qualify.
         var host = new Uri(NavigationManager.Uri).Host;
-        _isLocalhost = host is "localhost" or "127.0.0.1" or "::1";
+        _isLocalhost = HostEnvironment.IsDevelopment()
+            && host is "localhost" or "127.0.0.1" or "::1";
     }
 
     protected override void OnParametersSet()
