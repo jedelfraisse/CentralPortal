@@ -51,7 +51,12 @@ mainly speaks to PTA leaders deciding whether to use it.
   recipient and expires. Store the clean Smore URL.
 - Volunteer's weekly job (about 2 minutes): paste the Smore link, write a 2–3 line
   summary, add any new dated items, move any new standing reminder into Good to Know.
-- Setting per unit: newsletter on/off and a label (e.g. "Raider Reader").
+- No separate on/off setting: the This Week section appears only once a
+  Newsletter item exists, and the item's title carries the name (e.g. "Raider
+  Reader — Nov 13"). The newest issue is always the one featured.
+- "Today" for expiry uses US Eastern time for every site (`SchoolClock`), which
+  is a launch simplification. Add a time zone per site when a school outside
+  Eastern time joins.
 
 ### Mapping the real newsletter onto the site
 Roughly 60% of a typical issue is standing reference repeated every week.
