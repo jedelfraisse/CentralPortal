@@ -33,6 +33,7 @@ public DbSet<OrganizationLevel> OrganizationLevels => Set<OrganizationLevel>();
 public DbSet<Organization> Organizations => Set<Organization>();
 public DbSet<OperationalCycle> OperationalCycles => Set<OperationalCycle>();
 public DbSet<ParentAccessGrant> ParentAccessGrants => Set<ParentAccessGrant>();
+public DbSet<SiteContentItem> SiteContentItems => Set<SiteContentItem>();
 
 
 	protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -401,6 +402,32 @@ public DbSet<ParentAccessGrant> ParentAccessGrants => Set<ParentAccessGrant>();
 			entity.Property(x => x.Reason).HasMaxLength(1024);
 
 			entity.HasIndex(x => x.Email).IsUnique();
+		});
+
+		// ---------------------------
+		// SiteContentItem
+		// ---------------------------
+		modelBuilder.Entity<SiteContentItem>(entity =>
+		{
+			entity.ToTable("SiteContentItems");
+			entity.HasKey(x => x.Id);
+
+			entity.Property(x => x.Title).HasMaxLength(200).IsRequired();
+			entity.Property(x => x.Summary).HasMaxLength(4000);
+			entity.Property(x => x.LinkUrl).HasMaxLength(1024);
+			entity.Property(x => x.LinkLabel).HasMaxLength(100);
+			entity.Property(x => x.Location).HasMaxLength(200);
+			entity.Property(x => x.GroupName).HasMaxLength(100);
+			entity.Property(x => x.UpdatedByIdentityUserId).HasMaxLength(450);
+
+			// Deleting a Site removes its content with it.
+			entity.HasOne(x => x.Site)
+				.WithMany()
+				.HasForeignKey(x => x.SiteId)
+				.OnDelete(DeleteBehavior.Cascade);
+
+			// Every read is "this site's items of these kinds".
+			entity.HasIndex(x => new { x.SiteId, x.Kind });
 		});
 	}
 }

@@ -101,6 +101,7 @@ builder.Services.AddScoped<ProfileService>();
 builder.Services.AddScoped<MembershipLookupService>();
 builder.Services.AddScoped<DashboardService>();
 builder.Services.AddScoped<SiteAdminService>();
+builder.Services.AddScoped<SiteContentService>();
 builder.Services.AddScoped<OrganizationService>();
 builder.Services.AddScoped<FileUploadService>();
 builder.Services.AddScoped<PtaLogoGenerationService>();
