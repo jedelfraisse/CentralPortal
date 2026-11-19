@@ -76,6 +76,13 @@
     private bool _codeSent;
     private bool _sending;
     private string _statusMessage = string.Empty;
+    private bool _isLocalhost;
+
+    protected override void OnInitialized()
+    {
+        var host = new Uri(NavigationManager.Uri).Host;
+        _isLocalhost = host is "localhost" or "127.0.0.1" or "::1";
+    }
 
     protected override void OnParametersSet()
     {
@@ -99,8 +106,12 @@
             await PasswordlessSignInService.RequestCodeAsync(_email);
             _codeSent = true;
 
-            // SAFE, NON‑ENUMERATING MESSAGE
-            _statusMessage = "If your email is in our system, a sign‑in code has been sent.";
+            // SAFE, NON‑ENUMERATING MESSAGE — except on localhost, where
+            // there's no real user to protect and seeing the exact address
+            // a code was sent to is the whole point while developing.
+            _statusMessage = _isLocalhost
+                ? $"Sign‑in code sent to {_email.Trim().ToLowerInvariant()}."
+                : "If your email is in our system, a sign‑in code has been sent.";
         }
         catch (InvalidOperationException ex)
         {
@@ -109,6 +120,21 @@
         catch (UserBannedException)
         {
             NavigationManager.NavigateTo("/banned", forceLoad: true);
+        }
+        catch (EmailSendFailedException ex) when (_isLocalhost)
+        {
+            // The code was generated and stored regardless of the send
+            // failure — on localhost there's no real inbox to protect, so
+            // just hand it over directly rather than leaving the developer
+            // locked out behind a broken local SMTP config.
+            Logger.LogWarning(ex, "Sign-in email to {Email} failed to send; exposing the code directly because this is localhost", _email);
+            _codeSent = true;
+            _statusMessage = $"Email failed to send ({ex.Message}) — since this is localhost, here's the code anyway: {ex.Code}";
+        }
+        catch (EmailSendFailedException ex)
+        {
+            Logger.LogError(ex, "Failed to send a sign-in code to {Email}", _email);
+            _statusMessage = "We couldn't send a sign‑in code right now. Please try again in a few minutes.";
         }
         catch (Exception ex)
         {
@@ -119,7 +145,9 @@
             // an error. The real cause still needs to be visible somewhere,
             // though — log it rather than swallowing it outright.
             Logger.LogError(ex, "Failed to send a sign-in code to {Email}", _email);
-            _statusMessage = "We couldn't send a sign‑in code right now. Please try again in a few minutes.";
+            _statusMessage = _isLocalhost
+                ? $"Failed to send to {_email.Trim().ToLowerInvariant()}: {ex.Message}"
+                : "We couldn't send a sign‑in code right now. Please try again in a few minutes.";
         }
         finally
         {

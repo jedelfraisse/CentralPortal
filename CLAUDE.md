@@ -37,7 +37,7 @@ This is still literally how hostname/site resolution works (`RuntimeSiteContext`
 
 ## **1a. Organization Framework**
 
-As of Phase 1 (see [md/OrganizationFramework.md](md/OrganizationFramework.md) and [md/OrganizationFramework-Phase1.md](md/OrganizationFramework-Phase1.md)), the portal has a second, richer model layered on top of Site:
+As of Phase 1 (complete — this section is the current source of truth; the original design/implementation-plan docs it was drafted from have been retired), the portal has a second, richer model layered on top of Site:
 
 - **Organization** (SiteEngine/Entities/Organization.cs) — the community itself: identity, self-referencing parent/child hierarchy, and an optional 0-or-1 link to a `Site`. Always exists once a community is created, regardless of whether it has a hosted website.
 - **OrganizationLevel** — a position within an Organization Type's hierarchy (data-driven, not an enum — "National", "Council", "Unit" for PTA; "Network", "League", "Team" for a billiards community). A level is a classification an Organization references, not a layer it lives under.
@@ -89,21 +89,34 @@ SuperAdmin
 
 ---
 
-## **6. PortalTools Pattern**
+## **6. Tools Pattern (Modular Tool Projects)**
 
-(Your previous description remains unchanged.)
+See [md/ToolsArchitecture.md](md/ToolsArchitecture.md) for the full design. In short:
+
+- Every feature beyond the core platform is a **Tool** — its own project under the repo-root `/Tools` folder (`/Tools/<ToolName>/`), compiling to its own DLL plus a `wwwroot/` of UI assets.
+- A tool references **`SiteEngine`** only — never `WebApp`. `WebApp` holds no compile-time reference to a tool (that is what keeps tools modular).
+- Each tool ships one **`ToolManifest`** class (implements `SiteEngine`'s `IToolManifest`) declaring: `ToolName`, `Version`, `Scope` (`ToolScope`), `Category`, `IconClass`, the routes it exposes, the permission keys it requires, its per-organization configuration schema type, and a `RegisterServices(IServiceCollection)` for its own DI.
+- On build, MSBuild targets in the tool `.csproj` copy the DLL to `WebApp/bin` and the UI assets to `WebApp/wwwroot/Tools/<ToolName>/`. Works with plain `dotnet build`.
+- At startup SiteEngine scans the build output for `IToolManifest` implementations and populates an in-process `ToolRegistry` (routes, permissions, config schema). Nav / dashboard / `/portal-tools` read that registry — no hardcoded tool list, no hand-seeded `PortalTools` rows.
+- Tools are **per organization**: an `OrganizationTools` row (`OrganizationId`, `ToolName`, `ToolConfigJson`, `Enabled`) turns a tool on for an Organization and stores its configuration. Managed at Global Admin → Organizations → Tools tab.
+- `<ToolName>` is one stable string used for the folder, the project, `ToolManifest.ToolName`, `OrganizationTools.ToolName`, and the `wwwroot/Tools/<ToolName>/` path.
+
+The old `PortalTools` / `ToolPermission` / `ToolRule` entities are legacy: `PortalTools` (hand-seeded catalog) is superseded by manifest scanning; `ToolPermission` / `ToolRule` remain the intended backing for the (still unbuilt) per-organization permission-check layer that manifests' permission keys feed.
 
 ---
 
 ## **7. Page Folder Structure (Important)**
 
+Inside `WebApp` (core UI, compiled into the app):
+
 SharedPages/  
 PortalPages/  
 DivisionPages/  
 UnitPages/  
-Tools/<ToolName>/  
 
-(Your previous folder descriptions remain unchanged.)
+Tool UI does **not** live here. Each tool is a separate project at the repo root — `/Tools/<ToolName>/` with its own `Pages/`, `Services/`, `Models/`, `wwwroot/` — see §6 and [md/ToolsArchitecture.md](md/ToolsArchitecture.md). Its build output lands in `WebApp/bin` and `WebApp/wwwroot/Tools/<ToolName>/`.
+
+(Your previous descriptions of the `WebApp` folders remain unchanged.)
 
 ---
 
@@ -163,25 +176,33 @@ It should clearly explain what the platform is, who it serves, and how it works 
 
 ---
 
-## 8. First Tool: GiveBacks Membership Import Tool
+## 8. Example Tool: GiveBacks Membership Import Tool
+
+Illustrative only — packaged as a modular tool project per §6 and [md/ToolsArchitecture.md](md/ToolsArchitecture.md). The first tool actually being built is `SchoolCafeTool` (`/Tools/SchoolCafe/`); see that doc's §4 for the worked example.
 
 Purpose:  
 Import a CSV of member emails for a Local Unit for the current school year (GiveBacks CSV export).
 
-ToolScope: LocalUnit  
+Scope: LocalUnit  
 Access: Local Unit Admins only
 
 Behavior:  
 Upload CSV → parse emails → create/update membership records → mark admins if CSV includes admin emails → log import history
 
-Folder structure:  
-Tools/GiveBacksImportTool/  
- ImportPage.razor  
- ImportService.cs  
- ImportModel.cs
+Project structure (repo-root `/Tools`, one project per tool):  
+/Tools/GiveBacksImportTool/  
+ GiveBacksImportTool.csproj — references SiteEngine only  
+ ToolManifest.cs  
+ Pages/ImportPage.razor  
+ Services/ImportService.cs  
+ Models/ImportModel.cs, GiveBacksImportConfig.cs
+ wwwroot/
 
-PortalTools entry:  
-ToolName “GiveBacks Membership Import Tool”,  
-ToolScope LocalUnit,  
-Category Membership,  
-IconClass fa-solid fa-file-import
+ToolManifest declares:  
+ToolName "GiveBacksImportTool", DisplayName "GiveBacks Membership Import Tool",  
+Scope ToolScope.LocalUnit, Category "Membership",  
+IconClass "fa-solid fa-file-import",  
+RequiredPermissions [ "GiveBacksImport.Run" ],  
+ConfigSchemaType typeof(GiveBacksImportConfig) — or null if the tool needs no per-org config.  
+
+Enabled per Local Unit via an `OrganizationTools` row; any configuration lives in that row's `ToolConfigJson`.

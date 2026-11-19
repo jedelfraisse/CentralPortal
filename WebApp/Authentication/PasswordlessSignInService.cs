@@ -81,7 +81,18 @@ public class PasswordlessSignInService(
 
 		var code = _codeStore.GenerateCode(normalizedEmail);
 		var template = isFirstLogin ? LoginEmailTemplate.Welcome : LoginEmailTemplate.WelcomeBack;
-		await _emailLoginSender.SendLoginCodeAsync(normalizedEmail, code, template);
+
+		try
+		{
+			await _emailLoginSender.SendLoginCodeAsync(normalizedEmail, code, template);
+		}
+		catch (Exception ex)
+		{
+			// The code above is already generated and stored — a send failure
+			// doesn't invalidate it. Wrap it so the code travels with the
+			// exception; only a localhost caller (Login.razor) actually reads it.
+			throw new EmailSendFailedException(code, ex);
+		}
 	}
 
 	// -----------------------------

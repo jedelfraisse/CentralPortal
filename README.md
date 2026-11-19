@@ -247,6 +247,19 @@ The intent is for tools to be enabled or disabled depending on the organization 
 
 ---
 
+# Tools Architecture (Planned)
+
+**Status: Designed, not yet built.** See [md/ToolsArchitecture.md](md/ToolsArchitecture.md) for the full design.
+
+Every capability beyond the core platform — lunch menus (SchoolCafe), broadcasts, a morning show, volunteer and budget management, event management, digital signage, and integrations — is built as a **Tool**: a self-contained project under `/Tools` that compiles to its own DLL plus UI assets, registers itself with the engine through a `ToolManifest` class, and is enabled and configured **per organization**.
+
+- Tools are discovered automatically from their build output — nothing is edited into the core app to add one.
+- A tool can contribute pages, components, static assets, API endpoints, and background services.
+- Each organization turns tools on individually and holds its own configuration for each (an `OrganizationTools` record).
+- `SchoolCafeTool` (a PTA lunch-menu page backed by the SchoolCafe API) is the first tool being built against this architecture.
+
+---
+
 # Displays and Live Events (Planned)
 
 **Status: Not yet built.** The platform has no real-time infrastructure today; this is a meaningful piece of new work, not a small extension.
